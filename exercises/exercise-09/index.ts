@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk from 'chalk'
 
 /*
 
@@ -35,111 +35,141 @@ Run:
 */
 
 interface User {
-    type: 'user';
-    name: string;
-    age: number;
-    occupation: string;
+    type: 'user'
+    name: string
+    age: number
+    occupation: string
 }
 
 interface Admin {
-    type: 'admin';
-    name: string;
-    age: number;
-    role: string;
+    type: 'admin'
+    name: string
+    age: number
+    role: string
 }
 
-type Person = User | Admin;
+type Person = User | Admin
 
 const admins: Admin[] = [
     { type: 'admin', name: 'Jane Doe', age: 32, role: 'Administrator' },
-    { type: 'admin', name: 'Bruce Willis', age: 64, role: 'World saver' }
-];
+    { type: 'admin', name: 'Bruce Willis', age: 64, role: 'World saver' },
+]
 
 const users: User[] = [
-    { type: 'user', name: 'Max Mustermann', age: 25, occupation: 'Chimney sweep' },
-    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' }
-];
-
-type ApiResponse<T> = (
     {
-        status: 'success';
-        data: T;
-    } |
-    {
-        status: 'error';
-        error: string;
-    }
-);
+        type: 'user',
+        name: 'Max Mustermann',
+        age: 25,
+        occupation: 'Chimney sweep',
+    },
+    { type: 'user', name: 'Kate Müller', age: 23, occupation: 'Astronaut' },
+]
 
-function promisify(arg: unknown): unknown {
-    return null;
+type ApiResponse<T> =
+    | {
+          status: 'success'
+          data: T
+      }
+    | {
+          status: 'error'
+          error: string
+      }
+
+interface RequestFuncion<T> {
+    (callback: (response: T) => void): void
+}
+
+function promisify<T>(arg: RequestFuncion<ApiResponse<T>>): () => Promise<T> {
+    return () =>
+        new Promise((resolve, reject) => {
+            arg(response =>
+                response.status === 'error'
+                    ? reject(response)
+                    : resolve(response.data),
+            )
+        })
 }
 
 const oldApi = {
     requestAdmins(callback: (response: ApiResponse<Admin[]>) => void) {
         callback({
             status: 'success',
-            data: admins
-        });
+            data: admins,
+        })
     },
     requestUsers(callback: (response: ApiResponse<User[]>) => void) {
         callback({
             status: 'success',
-            data: users
-        });
+            data: users,
+        })
     },
-    requestCurrentServerTime(callback: (response: ApiResponse<number>) => void) {
+    requestCurrentServerTime(
+        callback: (response: ApiResponse<number>) => void,
+    ) {
         callback({
             status: 'success',
-            data: Date.now()
-        });
+            data: Date.now(),
+        })
     },
-    requestCoffeeMachineQueueLength(callback: (response: ApiResponse<number>) => void) {
+    requestCoffeeMachineQueueLength(
+        callback: (response: ApiResponse<unknown>) => void,
+    ) {
         callback({
             status: 'error',
-            error: 'Numeric value has exceeded Number.MAX_SAFE_INTEGER.'
-        });
-    }
-};
+            error: 'Numeric value has exceeded Number.MAX_SAFE_INTEGER.',
+        })
+    },
+}
 
 const api = {
-    requestAdmins: promisify(oldApi.requestAdmins),
-    requestUsers: promisify(oldApi.requestUsers),
-    requestCurrentServerTime: promisify(oldApi.requestCurrentServerTime),
-    requestCoffeeMachineQueueLength: promisify(oldApi.requestCoffeeMachineQueueLength)
-};
+    requestAdmins: promisify<Admin[]>(oldApi.requestAdmins),
+    requestUsers: promisify<User[]>(oldApi.requestUsers),
+    requestCurrentServerTime: promisify<number>(
+        oldApi.requestCurrentServerTime,
+    ),
+    requestCoffeeMachineQueueLength: promisify<unknown>(
+        oldApi.requestCoffeeMachineQueueLength,
+    ),
+}
 
 function logPerson(person: Person) {
     console.log(
-        ` - ${chalk.green(person.name)}, ${person.age}, ${person.type === 'admin' ? person.role : person.occupation}`
-    );
+        ` - ${chalk.green(person.name)}, ${person.age}, ${
+            person.type === 'admin' ? person.role : person.occupation
+        }`,
+    )
 }
 
 async function startTheApp() {
-    console.log(chalk.yellow('Admins:'));
-    (await api.requestAdmins()).forEach(logPerson);
-    console.log();
+    console.log(chalk.yellow('Admins:'))
+    ;(await api.requestAdmins()).forEach(logPerson)
+    console.log()
 
-    console.log(chalk.yellow('Users:'));
-    (await api.requestUsers()).forEach(logPerson);
-    console.log();
+    console.log(chalk.yellow('Users:'))
+    ;(await api.requestUsers()).forEach(logPerson)
+    console.log()
 
-    console.log(chalk.yellow('Server time:'));
-    console.log(`   ${new Date(await api.requestCurrentServerTime()).toLocaleString()}`);
-    console.log();
+    console.log(chalk.yellow('Server time:'))
+    console.log(
+        `   ${new Date(await api.requestCurrentServerTime()).toLocaleString()}`,
+    )
+    console.log()
 
-    console.log(chalk.yellow('Coffee machine queue length:'));
-    console.log(`   ${await api.requestCoffeeMachineQueueLength()}`);
+    console.log(chalk.yellow('Coffee machine queue length:'))
+    console.log(`   ${await api.requestCoffeeMachineQueueLength()}`)
 }
 
 startTheApp().then(
     () => {
-        console.log('Success!');
+        console.log('Success!')
     },
-    (e: Error) => {
-        console.log(`Error: "${e.message}", but it's fine, sometimes errors are inevitable.`);
-    }
-);
+    (e: ApiResponse<unknown>) => {
+        'error' in e &&
+            console.log(
+                `Error: "${e.error}", but it's fine, sometimes errors are inevitable.`,
+            )
+    },
+)
 
 // In case if you are stuck:
 // https://www.typescriptlang.org/docs/handbook/generics.html
